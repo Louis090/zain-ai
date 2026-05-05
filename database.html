@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>زين AI — إعداد قاعدة البيانات</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Tajawal:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #040407; --surface: #0f1120; --surface2: #161929;
+    --border: rgba(255,255,255,0.07); --border2: rgba(255,255,255,0.12);
+    --gold: #c9a84c; --gold-l: #e8c96a; --gold-dim: rgba(201,168,76,0.13);
+    --green: #2dd4a0; --green-dim: rgba(45,212,160,0.12);
+    --blue: #5a9cf5; --blue-dim: rgba(90,156,245,0.12);
+    --red: #f56565; --red-dim: rgba(245,101,101,0.1);
+    --white: #f0eee8; --muted: rgba(240,238,232,0.5); --faint: rgba(240,238,232,0.22);
+    --code-bg: #0a0c18; --fh: 'Cairo',sans-serif; --fb: 'Tajawal',sans-serif; --fc: 'JetBrains Mono',monospace;
+    --r: 10px; --rl: 16px;
+  }
+  body { background: var(--bg); color: var(--white); font-family: var(--fb); font-size: 15px; line-height: 1.8; direction: rtl; padding: 0; }
+
+  /* LAYOUT */
+  .layout { display: flex; min-height: 100vh; }
+  .sidebar {
+    width: 260px; background: var(--surface); border-left: 1px solid var(--border);
+    padding: 28px 0; position: sticky; top: 0; height: 100vh; overflow-y: auto;
+    flex-shrink: 0;
+  }
+  .sidebar-logo { font-family: var(--fh); font-size: 20px; font-weight: 900; padding: 0 20px 24px; border-bottom: 1px solid var(--border); display: block; margin-bottom: 16px; }
+  .sidebar-logo span { color: var(--gold); }
+  .sidebar-group { padding: 8px 12px; }
+  .sidebar-group-label { font-size: 11px; color: var(--faint); letter-spacing: .1em; font-weight: 500; padding: 0 8px; margin-bottom: 4px; }
+  .sidebar-link {
+    display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+    border-radius: var(--r); color: var(--muted); text-decoration: none;
+    font-size: 13px; font-family: var(--fb); transition: all .15s;
+    cursor: pointer; flex-direction: row-reverse; justify-content: flex-end;
+  }
+  .sidebar-link:hover { background: var(--surface2); color: var(--white); }
+  .sidebar-link.active { background: var(--gold-dim); color: var(--gold-l); }
+  .sidebar-link .step-num { width: 20px; height: 20px; border-radius: 50%; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: 10px; font-family: var(--fh); font-weight: 700; flex-shrink: 0; }
+  .sidebar-link.done .step-num { background: var(--green-dim); color: var(--green); }
+  .sidebar-link.active .step-num { background: var(--gold-dim); color: var(--gold); }
+
+  .main { flex: 1; padding: 48px 56px; max-width: 860px; }
+
+  /* HERO */
+  .page-title { font-family: var(--fh); font-size: 34px; font-weight: 900; margin-bottom: 10px; }
+  .page-title span { color: var(--gold); }
+  .page-sub { font-size: 16px; color: var(--muted); font-weight: 300; margin-bottom: 48px; line-height: 1.8; }
+
+  /* STEPS */
+  .step { margin-bottom: 52px; }
+  .step-header { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; flex-direction: row-reverse; justify-content: flex-end; }
+  .step-badge {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--gold-dim); border: 1px solid rgba(201,168,76,0.25);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--fh); font-weight: 900; font-size: 15px; color: var(--gold);
+    flex-shrink: 0;
+  }
+  .step-title { font-family: var(--fh); font-size: 20px; font-weight: 700; }
+  .step-desc { font-size: 14px; color: var(--muted); font-weight: 300; margin-bottom: 20px; line-height: 1.8; }
+
+  /* CODE BLOCKS */
+  .code-block { background: var(--code-bg); border: 1px solid var(--border2); border-radius: var(--rl); overflow: hidden; margin-bottom: 16px; }
+  .code-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 18px; border-bottom: 1px solid var(--border); flex-direction: row-reverse; }
+  .code-lang { font-size: 12px; color: var(--muted); font-family: var(--fb); }
+  .code-copy { font-size: 12px; color: var(--gold); background: none; border: none; cursor: pointer; font-family: var(--fb); padding: 2px 8px; border-radius: 6px; transition: background .15s; }
+  .code-copy:hover { background: var(--gold-dim); }
+  .code-body { padding: 20px 22px; overflow-x: auto; }
+  .code-body pre { font-family: var(--fc); font-size: 13px; line-height: 1.7; color: #cdd6f4; white-space: pre; }
+  .kw { color: #cba6f7; } /* keyword */
+  .fn { color: #89b4fa; } /* function */
+  .str { color: #a6e3a1; } /* string */
+  .cm { color: #6c7086; font-style: italic; } /* comment */
+  .num { color: #fab387; } /* number */
+  .var { color: #f38ba8; } /* variable */
+  .prop { color: #89dceb; } /* property */
+
+  /* CARDS */
+  .info-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--rl); padding: 20px 24px; margin-bottom: 16px; }
+  .info-card.success { border-color: rgba(45,212,160,0.25); background: var(--green-dim); }
+  .info-card.warning { border-color: rgba(201,168,76,0.25); background: var(--gold-dim); }
+  .info-card.danger { border-color: rgba(245,101,101,0.25); background: var(--red-dim); }
+  .info-card-title { font-family: var(--fh); font-size: 14px; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; flex-direction: row-reverse; justify-content: flex-end; }
+  .info-card p { font-size: 13px; color: var(--muted); font-weight: 300; line-height: 1.75; }
+
+  /* TOOL LINKS */
+  .tools-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
+  .tool-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--rl); padding: 18px 20px; text-decoration: none;
+    transition: border-color .18s, transform .18s; display: block;
+  }
+  .tool-card:hover { border-color: var(--border2); transform: translateY(-2px); }
+  .tool-icon { font-size: 24px; margin-bottom: 10px; display: block; }
+  .tool-name { font-family: var(--fh); font-size: 14px; font-weight: 700; color: var(--white); margin-bottom: 4px; }
+  .tool-desc { font-size: 12px; color: var(--muted); font-family: var(--fb); font-weight: 300; }
+
+  /* DIVIDER */
+  .divider { height: 1px; background: var(--border); margin: 40px 0; }
+
+  /* ENV TABLE */
+  .env-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+  .env-table th { text-align: right; padding: 10px 14px; font-size: 12px; color: var(--faint); font-family: var(--fb); border-bottom: 1px solid var(--border); font-weight: 500; }
+  .env-table td { padding: 12px 14px; font-size: 13px; border-bottom: 1px solid var(--border); font-family: var(--fb); }
+  .env-table td:first-child { font-family: var(--fc); font-size: 12px; color: var(--blue); }
+  .env-table td:last-child { color: var(--muted); font-weight: 300; }
+
+  /* CHECKLIST */
+  .checklist { display: flex; flex-direction: column; gap: 10px; }
+  .check-item { display: flex; align-items: flex-start; gap: 12px; font-size: 14px; color: var(--muted); font-family: var(--fb); font-weight: 300; flex-direction: row-reverse; }
+  .check-box { width: 20px; height: 20px; border-radius: 6px; border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0; margin-top: 2px; cursor: pointer; transition: all .15s; }
+  .check-box.done { background: var(--green-dim); border-color: rgba(45,212,160,0.3); color: var(--green); }
+
+  /* BADGE */
+  .badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 12px; border-radius: 100px; font-size: 12px; font-family: var(--fh); font-weight: 600; }
+  .badge-green { background: var(--green-dim); color: var(--green); border: 1px solid rgba(45,212,160,0.2); }
+  .badge-gold { background: var(--gold-dim); color: var(--gold); border: 1px solid rgba(201,168,76,0.2); }
+  .badge-blue { background: var(--blue-dim); color: var(--blue); border: 1px solid rgba(90,156,245,0.2); }
+
+  @media (max-width: 900px) {
+    .sidebar { display: none; }
+    .main { padding: 28px 20px; }
+    .tools-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<!-- ── الشريط الجانبي ── -->
+<nav class="sidebar">
+  <span class="sidebar-logo">زين <span>AI</span> — Dev</span>
+  <div class="sidebar-group">
+    <div class="sidebar-group-label">الخطوات</div>
+    <a class="sidebar-link done"><span class="step-num">✓</span> إنشاء حساب Supabase</a>
+    <a class="sidebar-link active"><span class="step-num">2</span> إنشاء جداول البيانات</a>
+    <a class="sidebar-link"><span class="step-num">3</span> متغيرات البيئة</a>
+    <a class="sidebar-link"><span class="step-num">4</span> ربط الموقع</a>
+    <a class="sidebar-link"><span class="step-num">5</span> إرسال البريد التلقائي</a>
+    <a class="sidebar-link"><span class="step-num">6</span> الاختبار</a>
+  </div>
+</nav>
+
+<!-- ── المحتوى ── -->
+<main class="main">
+
+  <div class="page-title">ربط <span>قاعدة البيانات</span></div>
+  <p class="page-sub">دليل كامل لربط موقع زين AI بـ Supabase — تخزين قائمة الانتظار، إرسال بريد ترحيب تلقائي، وإدارة العملاء من لوحة تحكم واحدة.</p>
+
+  <!-- الأدوات -->
+  <div class="tools-grid">
+    <div class="tool-card">
+      <span class="tool-icon">🗄️</span>
+      <div class="tool-name">Supabase</div>
+      <div class="tool-desc">قاعدة بيانات PostgreSQL مجانية وسهلة</div>
+    </div>
+    <div class="tool-card">
+      <span class="tool-icon">📧</span>
+      <div class="tool-name">Resend</div>
+      <div class="tool-desc">إرسال بريد إلكتروني تلقائي باللغة العربية</div>
+    </div>
+    <div class="tool-card">
+      <span class="tool-icon">⚡</span>
+      <div class="tool-name">Vercel</div>
+      <div class="tool-desc">استضافة مجانية مع دعم Serverless</div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ── الخطوة 1 ── -->
+  <div class="step">
+    <div class="step-header">
+      <div class="step-badge">1</div>
+      <div class="step-title">إنشاء جداول Supabase</div>
+    </div>
+    <p class="step-desc">افتح Supabase → SQL Editor → الصق هذا الكود لإنشاء جداول قائمة الانتظار والعملاء.</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">SQL — Supabase</span>
+        <button class="code-copy" onclick="copyCode(this)">نسخ</button>
+      </div>
+      <div class="code-body"><pre><span class="cm">-- جدول قائمة الانتظار</span>
+<span class="kw">CREATE TABLE</span> waitlist (
+  id          <span class="fn">uuid</span> <span class="kw">DEFAULT</span> gen_random_uuid() <span class="kw">PRIMARY KEY</span>,
+  email       text <span class="kw">NOT NULL UNIQUE</span>,
+  name        text,
+  company     text,
+  phone       text,
+  source      text <span class="kw">DEFAULT</span> <span class="str">'website'</span>,
+  status      text <span class="kw">DEFAULT</span> <span class="str">'pending'</span>,
+  created_at  timestamptz <span class="kw">DEFAULT</span> now()
+);
+
+<span class="cm">-- جدول العملاء (بعد التفعيل)</span>
+<span class="kw">CREATE TABLE</span> customers (
+  id          <span class="fn">uuid</span> <span class="kw">DEFAULT</span> gen_random_uuid() <span class="kw">PRIMARY KEY</span>,
+  email       text <span class="kw">NOT NULL UNIQUE</span>,
+  name        text <span class="kw">NOT NULL</span>,
+  company     text,
+  plan        text <span class="kw">DEFAULT</span> <span class="str">'starter'</span>,
+  status      text <span class="kw">DEFAULT</span> <span class="str">'active'</span>,
+  created_at  timestamptz <span class="kw">DEFAULT</span> now()
+);
+
+<span class="cm">-- تفعيل Row Level Security</span>
+<span class="kw">ALTER TABLE</span> waitlist <span class="kw">ENABLE ROW LEVEL SECURITY</span>;
+<span class="kw">ALTER TABLE</span> customers <span class="kw">ENABLE ROW LEVEL SECURITY</span>;
+
+<span class="cm">-- سماح للجميع بالإضافة (للموقع)</span>
+<span class="kw">CREATE POLICY</span> <span class="str">"allow_insert"</span> <span class="kw">ON</span> waitlist
+  <span class="kw">FOR INSERT WITH CHECK</span> (<span class="kw">true</span>);
+
+<span class="cm">-- عرض فقط للمدمين</span>
+<span class="kw">CREATE POLICY</span> <span class="str">"admin_select"</span> <span class="kw">ON</span> waitlist
+  <span class="kw">FOR SELECT USING</span> (auth.role() = <span class="str">'service_role'</span>);</pre></div>
+    </div>
+  </div>
+
+  <!-- ── الخطوة 2 ── -->
+  <div class="step">
+    <div class="step-header">
+      <div class="step-badge">2</div>
+      <div class="step-title">متغيرات البيئة (.env)</div>
+    </div>
+    <p class="step-desc">أنشئ ملف <code style="background:var(--surface2);padding:2px 8px;border-radius:6px;font-family:var(--fc);font-size:12px;color:var(--blue)">.env.local</code> في مجلد مشروعك وأضف هذه المتغيرات:</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">.env.local</span>
+        <button class="code-copy" onclick="copyCode(this)">نسخ</button>
+      </div>
+      <div class="code-body"><pre><span class="cm"># Supabase — من Settings > API</span>
+<span class="var">NEXT_PUBLIC_SUPABASE_URL</span>=https://xxxxx.supabase.co
+<span class="var">NEXT_PUBLIC_SUPABASE_ANON_KEY</span>=eyJhbGc...
+<span class="var">SUPABASE_SERVICE_KEY</span>=eyJhbGc...
+
+<span class="cm"># Resend — من resend.com</span>
+<span class="var">RESEND_API_KEY</span>=re_xxxxxxxxxxxx
+
+<span class="cm"># معلومات البريد</span>
+<span class="var">FROM_EMAIL</span>=hello@zainai.sa
+<span class="var">FROM_NAME</span>=زين AI</pre></div>
+    </div>
+
+    <div class="info-card warning">
+      <div class="info-card-title">⚠️ تنبيه أمني</div>
+      <p>لا تشارك ملف .env مع أحد ولا تضعه في GitHub. أضف <code style="background:rgba(0,0,0,0.2);padding:1px 6px;border-radius:4px;font-family:var(--fc);font-size:11px">.env.local</code> إلى ملف .gitignore فوراً.</p>
+    </div>
+  </div>
+
+  <!-- ── الخطوة 3 ── -->
+  <div class="step">
+    <div class="step-header">
+      <div class="step-badge">3</div>
+      <div class="step-title">كود ربط الموقع بـ Supabase</div>
+    </div>
+    <p class="step-desc">أنشئ ملف <code style="background:var(--surface2);padding:2px 8px;border-radius:6px;font-family:var(--fc);font-size:12px;color:var(--blue)">lib/waitlist.js</code> — هذا الكود يربط نموذج التسجيل بقاعدة البيانات.</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">JavaScript — lib/waitlist.js</span>
+        <button class="code-copy" onclick="copyCode(this)">نسخ</button>
+      </div>
+      <div class="code-body"><pre><span class="kw">import</span> { createClient } <span class="kw">from</span> <span class="str">'@supabase/supabase-js'</span>
+
+<span class="kw">const</span> <span class="var">supabase</span> = createClient(
+  process.env.<span class="prop">NEXT_PUBLIC_SUPABASE_URL</span>,
+  process.env.<span class="prop">NEXT_PUBLIC_SUPABASE_ANON_KEY</span>
+)
+
+<span class="cm">// إضافة بريد إلكتروني لقائمة الانتظار</span>
+<span class="kw">export async function</span> <span class="fn">addToWaitlist</span>({ email, name, company }) {
+  <span class="cm">// التحقق من صحة البريد</span>
+  <span class="kw">if</span> (!email || !email.includes(<span class="str">'@'</span>)) {
+    <span class="kw">return</span> { success: <span class="kw">false</span>, error: <span class="str">'البريد الإلكتروني غير صحيح'</span> }
+  }
+
+  <span class="cm">// الإضافة لقاعدة البيانات</span>
+  <span class="kw">const</span> { data, error } = <span class="kw">await</span> <span class="var">supabase</span>
+    .from(<span class="str">'waitlist'</span>)
+    .insert([{ email, name, company, source: <span class="str">'website'</span> }])
+    .select()
+
+  <span class="kw">if</span> (error) {
+    <span class="cm">// البريد مسجّل مسبقاً</span>
+    <span class="kw">if</span> (error.code === <span class="str">'23505'</span>) {
+      <span class="kw">return</span> { success: <span class="kw">false</span>, error: <span class="str">'هذا البريد مسجل مسبقاً!'</span> }
+    }
+    <span class="kw">return</span> { success: <span class="kw">false</span>, error: <span class="str">'حدث خطأ، حاول مجدداً'</span> }
+  }
+
+  <span class="cm">// إرسال بريد ترحيب</span>
+  <span class="kw">await</span> <span class="fn">sendWelcomeEmail</span>({ email, name })
+
+  <span class="kw">return</span> { success: <span class="kw">true</span>, data }
+}
+
+<span class="cm">// إرسال بريد ترحيب عبر Resend</span>
+<span class="kw">async function</span> <span class="fn">sendWelcomeEmail</span>({ email, name }) {
+  <span class="kw">try</span> {
+    <span class="kw">await</span> fetch(<span class="str">'/api/send-welcome'</span>, {
+      method: <span class="str">'POST'</span>,
+      headers: { <span class="str">'Content-Type'</span>: <span class="str">'application/json'</span> },
+      body: JSON.stringify({ email, name })
+    })
+  } <span class="kw">catch</span> (e) {
+    console.error(<span class="str">'فشل إرسال البريد:'</span>, e)
+  }
+}</pre></div>
+    </div>
+  </div>
+
+  <!-- ── الخطوة 4 ── -->
+  <div class="step">
+    <div class="step-header">
+      <div class="step-badge">4</div>
+      <div class="step-title">API Route — إرسال البريد التلقائي</div>
+    </div>
+    <p class="step-desc">أنشئ ملف <code style="background:var(--surface2);padding:2px 8px;border-radius:6px;font-family:var(--fc);font-size:12px;color:var(--blue)">api/send-welcome.js</code> لإرسال بريد ترحيب عربي جميل لكل مسجّل.</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">JavaScript — api/send-welcome.js</span>
+        <button class="code-copy" onclick="copyCode(this)">نسخ</button>
+      </div>
+      <div class="code-body"><pre><span class="kw">import</span> { Resend } <span class="kw">from</span> <span class="str">'resend'</span>
+
+<span class="kw">const</span> <span class="var">resend</span> = <span class="kw">new</span> <span class="fn">Resend</span>(process.env.<span class="prop">RESEND_API_KEY</span>)
+
+<span class="kw">export default async function</span> <span class="fn">handler</span>(req, res) {
+  <span class="kw">const</span> { email, name } = req.body
+
+  <span class="kw">const</span> { error } = <span class="kw">await</span> <span class="var">resend</span>.emails.send({
+    from: <span class="str">`زين AI &lt;hello@zainai.sa&gt;`</span>,
+    to: email,
+    subject: <span class="str">'🎉 أنت على القائمة! مرحباً بك في زين AI'</span>,
+    html: <span class="fn">welcomeTemplate</span>(name)
+  })
+
+  <span class="kw">if</span> (error) <span class="kw">return</span> res.status(<span class="num">400</span>).json({ error })
+  res.status(<span class="num">200</span>).json({ success: <span class="kw">true</span> })
+}
+
+<span class="kw">function</span> <span class="fn">welcomeTemplate</span>(name) {
+  <span class="kw">return</span> <span class="str">`
+  &lt;div dir="rtl" style="font-family:Cairo,sans-serif;max-width:560px;
+    margin:0 auto;background:#040407;color:#f0eee8;border-radius:16px;
+    overflow:hidden;"&gt;
+
+    &lt;div style="background:#c9a84c;padding:32px;text-align:center;"&gt;
+      &lt;h1 style="font-size:28px;font-weight:900;color:#040407;margin:0;"&gt;
+        زين AI
+      &lt;/h1&gt;
+    &lt;/div&gt;
+
+    &lt;div style="padding:36px;"&gt;
+      &lt;h2 style="font-size:22px;margin-bottom:12px;"&gt;
+        مرحباً ${name || 'بك'} 👋
+      &lt;/h2&gt;
+      &lt;p style="color:rgba(240,238,232,0.65);line-height:1.9;font-size:15px;"&gt;
+        شكراً لانضمامك لقائمة انتظار زين AI!
+        أنت الآن ضمن أول المسجلين الذين سيحصلون على:
+      &lt;/p&gt;
+      &lt;ul style="margin:20px 0;padding-right:20px;color:rgba(240,238,232,0.8);line-height:2;"&gt;
+        &lt;li&gt;✅ 3 أشهر مجانًا عند الإطلاق&lt;/li&gt;
+        &lt;li&gt;✅ دعم إعداد مخصص&lt;/li&gt;
+        &lt;li&gt;✅ أسعار المؤسسين الثابتة للأبد&lt;/li&gt;
+      &lt;/ul&gt;
+      &lt;p style="color:rgba(240,238,232,0.5);font-size:13px;"&gt;
+        سنتواصل معك خلال 48 ساعة بتفاصيل وصولك المبكر.
+      &lt;/p&gt;
+    &lt;/div&gt;
+
+    &lt;div style="padding:20px;text-align:center;border-top:1px solid rgba(255,255,255,0.07);"&gt;
+      &lt;p style="font-size:12px;color:rgba(240,238,232,0.3);"&gt;
+        © 2025 زين AI · المملكة العربية السعودية
+      &lt;/p&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+  `</span>
+}</pre></div>
+    </div>
+  </div>
+
+  <!-- ── الخطوة 5 ── -->
+  <div class="step">
+    <div class="step-header">
+      <div class="step-badge">5</div>
+      <div class="step-title">ربط النموذج بالموقع</div>
+    </div>
+    <p class="step-desc">استبدل زر الموقع الحالي بهذا الكود لربطه مباشرة بقاعدة البيانات.</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">JavaScript — في صفحة الموقع</span>
+        <button class="code-copy" onclick="copyCode(this)">نسخ</button>
+      </div>
+      <div class="code-body"><pre><span class="kw">import</span> { addToWaitlist } <span class="kw">from</span> <span class="str">'./lib/waitlist'</span>
+
+<span class="cm">// استبدل دالة handleSignup الحالية بهذه</span>
+<span class="kw">async function</span> <span class="fn">handleSignup</span>() {
+  <span class="kw">const</span> email = document.getElementById(<span class="str">'email-input'</span>).value
+  <span class="kw">const</span> btn   = document.getElementById(<span class="str">'signup-btn'</span>)
+  <span class="kw">const</span> msg   = document.getElementById(<span class="str">'success-msg'</span>)
+  <span class="kw">const</span> err   = document.getElementById(<span class="str">'error-msg'</span>)
+
+  <span class="cm">// إظهار حالة التحميل</span>
+  btn.textContent = <span class="str">'جارٍ التسجيل...'</span>
+  btn.disabled = <span class="kw">true</span>
+
+  <span class="kw">const</span> result = <span class="kw">await</span> <span class="fn">addToWaitlist</span>({ email })
+
+  <span class="kw">if</span> (result.success) {
+    msg.style.display = <span class="str">'block'</span>
+    document.getElementById(<span class="str">'email-input'</span>).style.display = <span class="str">'none'</span>
+    btn.style.display = <span class="str">'none'</span>
+  } <span class="kw">else</span> {
+    err.textContent = result.error
+    err.style.display = <span class="str">'block'</span>
+    btn.textContent = <span class="str">'← احجز مكانك الآن'</span>
+    btn.disabled = <span class="kw">false</span>
+  }
+}</pre></div>
+    </div>
+  </div>
+
+  <!-- قائمة التحقق -->
+  <div class="divider"></div>
+  <div class="step">
+    <div class="step-header">
+      <div class="step-badge">✓</div>
+      <div class="step-title">قائمة التحقق النهائية</div>
+    </div>
+    <div class="checklist">
+      <div class="check-item" onclick="this.querySelector('.check-box').classList.toggle('done'); this.querySelector('.check-box').textContent = this.querySelector('.check-box').classList.contains('done') ? '✓' : ''">
+        <div class="check-box"></div>
+        <span>إنشاء مشروع Supabase وتشغيل SQL</span>
+      </div>
+      <div class="check-item" onclick="this.querySelector('.check-box').classList.toggle('done'); this.querySelector('.check-box').textContent = this.querySelector('.check-box').classList.contains('done') ? '✓' : ''">
+        <div class="check-box"></div>
+        <span>إضافة متغيرات البيئة في Vercel</span>
+      </div>
+      <div class="check-item" onclick="this.querySelector('.check-box').classList.toggle('done'); this.querySelector('.check-box').textContent = this.querySelector('.check-box').classList.contains('done') ? '✓' : ''">
+        <div class="check-box"></div>
+        <span>تفعيل حساب Resend وتأكيد الدومين</span>
+      </div>
+      <div class="check-item" onclick="this.querySelector('.check-box').classList.toggle('done'); this.querySelector('.check-box').textContent = this.querySelector('.check-box').classList.contains('done') ? '✓' : ''">
+        <div class="check-box"></div>
+        <span>اختبار التسجيل والتحقق من وصول البريد</span>
+      </div>
+      <div class="check-item" onclick="this.querySelector('.check-box').classList.toggle('done'); this.querySelector('.check-box').textContent = this.querySelector('.check-box').classList.contains('done') ? '✓' : ''">
+        <div class="check-box"></div>
+        <span>إضافة .env.local إلى .gitignore</span>
+      </div>
+      <div class="check-item" onclick="this.querySelector('.check-box').classList.toggle('done'); this.querySelector('.check-box').textContent = this.querySelector('.check-box').classList.contains('done') ? '✓' : ''">
+        <div class="check-box"></div>
+        <span>رفع الموقع على Vercel ورابط الدومين</span>
+      </div>
+    </div>
+
+    <div class="info-card success" style="margin-top:24px;">
+      <div class="info-card-title" style="color:var(--green)">🎉 بعد الإعداد</div>
+      <p>ستجد كل التسجيلات في Supabase → Table Editor → waitlist. يمكنك تصديرها كـ CSV أو ربطها بـ Notion أو Google Sheets تلقائياً عبر Zapier.</p>
+    </div>
+  </div>
+
+</main>
+</div>
+
+<script>
+function copyCode(btn) {
+  const code = btn.closest('.code-block').querySelector('pre').textContent;
+  navigator.clipboard.writeText(code).then(() => {
+    btn.textContent = '✓ تم النسخ';
+    setTimeout(() => btn.textContent = 'نسخ', 2000);
+  });
+}
+</script>
+</body>
+</html>
